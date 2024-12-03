@@ -1,0 +1,197 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: StepAction
+metadata:
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: "konflux"
+  name: fips-operator-check-step-action
+spec:
+  description: >-
+    Scans operator bundle image builds for FIPS compliance using the check-payload tool.
+  params:
+    - name: image-digest
+      description: Image digest to scan.
+    - name: image-url
+      description: Image URL.
+  results:
+    - name: TEST_OUTPUT
+      description: Tekton task test output.
+    - name: IMAGES_PROCESSED
+      description: Images processed in the task.
+  image: quay.io/yashn/konflux-test-yashn:latest-amd64
+  env:
+    - name: IMAGE_URL
+      value: $(params.image-url)
+    - name: IMAGE_DIGEST
+      value: $(params.image-digest)
+  securityContext:
+    capabilities:
+      add:
+        - SETFCAP
+  script: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # shellcheck source=/dev/null
+    . /utils.sh
+
+    get_image_labels() {
+      local image=$1
+
+      labels=$(skopeo inspect docker://"${image}" --config | jq -r '.config.Labels // {} | to_entries[] | "\(.key)=\(.value)"')
+
+      echo "${labels}"
+    }
+
+    imagewithouttag=$(echo -n "$IMAGE_URL" | sed "s/\(.*\):.*/\1/")
+    # strip new-line escape symbol from parameter and save it to variable
+    imageanddigest="${imagewithouttag}@${IMAGE_DIGEST}"
+
+    imageanddigest_labels=$(get_image_labels "${imageanddigest}")
+    if ! echo "${imageanddigest_labels}" | grep -q 'operators.operatorframework.io.bundle.manifests.v1='; then
+      echo "The image $imageanddigest is not an operator bundle. Skipping FIPS static check..."
+      exit 0
+    fi
+
+    # Run the FIPS check only if the bundle is part of the Openshift Subscription or has the fips label set
+    imageanddigest_render_out=$(opm render "$imageanddigest")
+    subscription_label=$(echo "${imageanddigest_render_out}" | jq -r '.properties[] | select(.value.annotations["operators.openshift.io/valid-subscription"] != null) | (.value.annotations["operators.openshift.io/valid-subscription"] | fromjson)[]')
+    fips_label=$(echo imageanddigest_labels | grep 'features.operators.openshift.io/fips-compliant=' | cut -d= -f2 || true)
+
+    if ! echo "${subscription_label}" | grep -e "OpenShift Kubernetes Engine" -e "OpenShift Container Platform" -e "OpenShift Platform Plus"; then
+      echo "OpenShift Kubernetes Engine, OpenShift Platform Plus or OpenShift Container Platform are not present in operators.openshift.io/valid-subscription."
+      echo "Subscription labels are : $subscription_label"
+      if [ -z "$fips_label" ] || [ "$fips_label" != "true" ]; then
+        echo "The label features.operators.openshift.io/fips-compliant is also not set to true. Skipping the FIPS static check..."
+        exit 0
+      else
+        echo "The label features.operators.openshift.io/fips-compliant is set to true. Running the FIPS static check..."
+      fi
+    else
+      echo "OpenShift Kubernetes Engine, OpenShift Platform Plus or OpenShift Container Platform are present in operators.openshift.io/valid-subscription. Running the FIPS static check..."
+    fi
+
+    unique_related_images=()
+    digests_processed=()
+    images_processed_template='{"image": {"pullspec": "'"$IMAGE_URL"'", "digests": [%s]}}'
+
+    success_counter=0
+    warnings_counter=0
+    error_counter=0
+    failure_counter=0
+
+    echo "Inspecting raw image manifest $imageanddigest."
+    # Get the arch and image manifests by inspecting the image. This is mainly for identifying image indexes
+    image_manifests=$(get_image_manifests -i "${imageanddigest}")
+    echo "Image manifests are $image_manifests"
+
+    declare -A seen_related_images
+    # Extract relatedImages from the bundle image
+    while read -r _ arch_sha; do
+      digests_processed+=("\"$arch_sha\"")
+      bundle_render_out=$(opm render "$imagewithouttag@$arch_sha")
+      manifest_related_images=$(echo "${bundle_render_out}" | jq -r '.relatedImages[]?.image')
+      if [ -n "$manifest_related_images" ]; then
+        for img in $manifest_related_images; do
+          if [ -z "${seen_related_images["$img"]}" ]; then
+            unique_related_images+=("$img")
+            seen_related_images["$img"]=1
+          fi
+        done
+      fi
+    done < <(echo "$image_manifests" | jq -r 'to_entries[] | "\(.key) \(.value)"')
+
+    echo "Unique related images: ${unique_related_images[*]}"
+
+    for related_image in "${unique_related_images[@]}"; do
+      echo "Processing related image : ${related_image}"
+
+      component_label=$(get_image_labels "${related_image}" | grep 'com.redhat.component=' | cut -d= -f2 || true)
+      echo "Component label is ${component_label}"
+
+      if [ -z "${component_label}" ]; then
+        echo "Error: Could not get com.redhat.component label for ${related_image}"
+        error_counter=$((error_counter + 1))
+        continue
+      fi
+
+      # Convert image to OCI format since umoci can only handle the OCI format
+      if ! skopeo copy --remove-signatures "docker://${related_image}" "oci:///tekton/home/${component_label}:latest"; then
+        echo "Error: Could not convert image ${related_image} to OCI format"
+        error_counter=$((error_counter + 1))
+        continue
+      fi
+
+      # Unpack OCI image
+      if ! umoci raw unpack --rootless \
+          --image "/tekton/home/${component_label}:latest" \
+          "/tekton/home/unpacked-${component_label}"; then
+        echo "Error: Could not unpack OCI image ${related_image}"
+        error_counter=$((error_counter + 1))
+        continue
+      fi
+
+      echo "Now RUNNING SCAN ON THE IMAGE ${related_image}"
+
+      # Run check-payload on the unpacked image
+      # The check-payload command fails with exit 1 when the scan for an image is unsuccessful
+      # or when the image is not FIPS compliant. Hence, count those as failures and not errors
+      if ! check-payload scan local \
+          --path="/tekton/home/unpacked-${component_label}" \
+          --components="${component_label}" \
+          --output-format=csv \
+          --output-file="/tekton/home/report-${component_label}.csv"; then
+        echo "check-payload scan failed for ${related_image}"
+        failure_counter=$((failure_counter + 1))
+        continue
+      fi
+
+      if [ -f "/tekton/home/report-${component_label}.csv" ]; then
+        if grep -q -- "---- Successful run" "/tekton/home/report-${component_label}.csv"; then
+          echo "check-payload scan was successful for ${related_image}"
+          success_counter=$((success_counter + 1))
+        elif grep -q -- "---- Successful run with warnings" "/tekton/home/report-${component_label}.csv"; then
+          echo "check-payload scan was successful with warnings for ${related_image}"
+          warnings_counter=$((warnings_counter + 1))
+        fi
+      fi
+
+      echo "Success counter is : ${success_counter}"
+      echo "Warnings counter is : ${warnings_counter}"
+      echo "Error counter is: ${error_counter}"
+      echo "Failure counter is ${failure_counter}"
+
+    done
+
+    note="Task $(context.task.name) failed: Some images could not be scanned. For details, check Tekton task log."
+    ERROR_OUTPUT=$(make_result_json -r ERROR -t "$note")
+
+    note="Task $(context.task.name) completed: Check result for task result."
+    if [[ "$error_counter" == 0 ]];
+    then
+      if [[ "${failure_counter}" -gt 0 ]]; then
+        RES="FAILURE"
+      elif [[ "${warnings_counter}" -gt 0 ]]; then
+        RES="WARNING"
+      elif [[ "${success_counter}" -eq 0 ]]; then
+        # when all counters are 0, there are no relatedImages to run the FIPS check on
+        note="Task $(context.task.name) success: No relatedImages found to run the FIPS check."
+        RES="SUCCESS"
+      else
+        RES="SUCCESS"
+      fi
+      TEST_OUTPUT=$(make_result_json \
+        -r "${RES}" \
+        -s "${success_counter}" -f "${failure_counter}" -w "${warnings_counter}" -t "$note")
+    fi
+    echo "${TEST_OUTPUT:-${ERROR_OUTPUT}}" | tee "$(step.results.TEST_OUTPUT.path)"
+
+    # If the image is an Image Index, also add the Image Index digest to the list.
+    if [[ "${digests_processed[*]}" != *"$IMAGE_DIGEST"* ]]; then
+      digests_processed+=("\"$IMAGE_DIGEST\"")
+    fi
+    digests_processed_string=$(IFS=,; echo "${digests_processed[*]}")
+
+    echo "${images_processed_template/\[%s]/[$digests_processed_string]}" | tee "$(step.results.IMAGES_PROCESSED.path)"
