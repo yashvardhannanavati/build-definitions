@@ -140,10 +140,17 @@ spec:
         echo "${images_processed_template/\[%s]/[$digests_processed_string]}" >/tekton/home/images_processed.txt
       computeResources:
         limits:
+<<<<<<< HEAD
           memory: 8Gi
         requests:
           cpu: 500m
           memory: 8Gi
+=======
+          memory: 4Gi
+        requests:
+          cpu: 300m
+          memory: 2Gi
+>>>>>>> 8eaec67d (Update memory limits fips-operator-bundle-check-oci-ta.yaml)
       securityContext:
         capabilities:
           add:
@@ -151,10 +158,17 @@ spec:
     - name: fips-operator-check-step-action
       computeResources:
         limits:
+<<<<<<< HEAD
           memory: 8Gi
         requests:
           cpu: 500m
           memory: 8Gi
+=======
+          memory: 4Gi
+        requests:
+          cpu: 300m
+          memory: 2Gi
+>>>>>>> 8eaec67d (Update memory limits fips-operator-bundle-check-oci-ta.yaml)
       ref:
         params:
           - name: url
