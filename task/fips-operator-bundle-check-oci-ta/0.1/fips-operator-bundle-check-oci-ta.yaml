@@ -141,23 +141,6 @@ spec:
       computeResources:
         limits:
 <<<<<<< HEAD
-          memory: 8Gi
-        requests:
-          cpu: 500m
-          memory: 8Gi
-=======
-          memory: 4Gi
-        requests:
-          cpu: 300m
-          memory: 2Gi
->>>>>>> 8eaec67d (Update memory limits fips-operator-bundle-check-oci-ta.yaml)
-      securityContext:
-        capabilities:
-          add:
-            - SETFCAP
-    - name: fips-operator-check-step-action
-      computeResources:
-        limits:
 <<<<<<< HEAD
           memory: 8Gi
         requests:
@@ -169,6 +152,37 @@ spec:
           cpu: 300m
           memory: 2Gi
 >>>>>>> 8eaec67d (Update memory limits fips-operator-bundle-check-oci-ta.yaml)
+=======
+          memory: 8Gi
+        requests:
+          cpu: 500m
+          memory: 8Gi
+>>>>>>> 941976b6 (Update fips-operator-bundle-check-oci-ta.yaml)
+      securityContext:
+        capabilities:
+          add:
+            - SETFCAP
+    - name: fips-operator-check-step-action
+      computeResources:
+        limits:
+<<<<<<< HEAD
+<<<<<<< HEAD
+          memory: 8Gi
+        requests:
+          cpu: 500m
+          memory: 8Gi
+=======
+          memory: 4Gi
+        requests:
+          cpu: 300m
+          memory: 2Gi
+>>>>>>> 8eaec67d (Update memory limits fips-operator-bundle-check-oci-ta.yaml)
+=======
+          memory: 8Gi
+        requests:
+          cpu: 500m
+          memory: 8Gi
+>>>>>>> 941976b6 (Update fips-operator-bundle-check-oci-ta.yaml)
       ref:
         params:
           - name: url
