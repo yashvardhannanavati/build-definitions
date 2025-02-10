@@ -41,7 +41,11 @@ spec:
         - use
         - $(params.SOURCE_ARTIFACT)=/var/workdir/source
     - name: get-unique-related-images
+<<<<<<< HEAD
       image: quay.io/redhat-appstudio/konflux-test:v1.4.17@sha256:36d3a2a6f4f96df41fc56c7c1c5a11c5d1c621f0f767607fda3f83cc21f638cc
+=======
+      image: quay.io/redhat-appstudio/konflux-test:v1.4.14@sha256:4ee06e7d8bb3a9b9503f8f1293ee70c521aa51662e11335439b87f81bda6e246
+>>>>>>> affe9c11 (update konflux-test reference in fips tasks)
       env:
         - name: IMAGE_URL
           value: $(params.image-url)
@@ -198,7 +202,11 @@ spec:
             value: stepactions/fips-operator-check-step-action/0.1/fips-operator-check-step-action.yaml
         resolver: git
     - name: parse-images-processed-result
+<<<<<<< HEAD
       image: quay.io/redhat-appstudio/konflux-test:v1.4.17@sha256:36d3a2a6f4f96df41fc56c7c1c5a11c5d1c621f0f767607fda3f83cc21f638cc
+=======
+      image: quay.io/redhat-appstudio/konflux-test:v1.4.14@sha256:4ee06e7d8bb3a9b9503f8f1293ee70c521aa51662e11335439b87f81bda6e246
+>>>>>>> affe9c11 (update konflux-test reference in fips tasks)
       env:
         - name: STEP_ACTION_TEST_OUTPUT
           value: $(steps.fips-operator-check-step-action.results.TEST_OUTPUT)
