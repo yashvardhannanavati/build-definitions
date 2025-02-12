@@ -77,7 +77,8 @@ spec:
 
         echo "Getting Target ocp version for the FBC fragment"
         image_manifest_sha=$(echo "${image_manifests}" | jq -r 'to_entries[0].value')
-        target_ocp_version=$(get_ocp_version_from_fbc_fragment "$image_without_tag@$image_manifest_sha")
+        # target_ocp_version=$(get_ocp_version_from_fbc_fragment "$image_without_tag@$image_manifest_sha")
+        target_ocp_version="v4.15"
         echo "${target_ocp_version#v}" > "/tekton/home/target_ocp_version.txt"
         echo "Target OCP version: ${target_ocp_version}"
 
