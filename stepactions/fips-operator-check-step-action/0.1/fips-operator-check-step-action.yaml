@@ -15,10 +15,14 @@ spec:
     - name: TEST_OUTPUT
       description: Tekton task test output.
 <<<<<<< HEAD
+<<<<<<< HEAD
   image: quay.io/redhat-appstudio/konflux-test:v1.4.17@sha256:36d3a2a6f4f96df41fc56c7c1c5a11c5d1c621f0f767607fda3f83cc21f638cc
 =======
   image: quay.io/redhat-appstudio/konflux-test:v1.4.14@sha256:4ee06e7d8bb3a9b9503f8f1293ee70c521aa51662e11335439b87f81bda6e246
 >>>>>>> affe9c11 (update konflux-test reference in fips tasks)
+=======
+  image: quay.io/redhat-appstudio/konflux-test:v1.4.15@sha256:23a7e8c745a037da283f18f5e5108598efeaeb5263d599411b6c4a25c42c6f94
+>>>>>>> 1153c86b (update konflux-test references for FIPS tasks)
   securityContext:
     capabilities:
       add:
