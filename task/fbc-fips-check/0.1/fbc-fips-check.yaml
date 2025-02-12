@@ -28,7 +28,11 @@ spec:
       description: Images processed in the task.
   steps:
     - name: get-unique-related-images
+<<<<<<< HEAD
       image: quay.io/redhat-appstudio/konflux-test:v1.4.17@sha256:36d3a2a6f4f96df41fc56c7c1c5a11c5d1c621f0f767607fda3f83cc21f638cc
+=======
+      image: quay.io/redhat-appstudio/konflux-test:v1.4.15@sha256:23a7e8c745a037da283f18f5e5108598efeaeb5263d599411b6c4a25c42c6f94
+>>>>>>> eba1752c (Update fbc-fips-check.yaml)
       computeResources:
         limits:
           memory: 8Gi
@@ -185,7 +189,11 @@ spec:
             value: stepactions/fips-operator-check-step-action/0.1/fips-operator-check-step-action.yaml
 
     - name: parse-images-processed-result
+<<<<<<< HEAD
       image: quay.io/redhat-appstudio/konflux-test:v1.4.17@sha256:36d3a2a6f4f96df41fc56c7c1c5a11c5d1c621f0f767607fda3f83cc21f638cc
+=======
+      image: quay.io/redhat-appstudio/konflux-test:v1.4.15@sha256:23a7e8c745a037da283f18f5e5108598efeaeb5263d599411b6c4a25c42c6f94
+>>>>>>> eba1752c (Update fbc-fips-check.yaml)
       env:
         - name: STEP_ACTION_TEST_OUTPUT
           value: $(steps.fips-operator-check-step-action.results.TEST_OUTPUT)
