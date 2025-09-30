@@ -281,9 +281,9 @@ spec:
       ref:
         params:
           - name: url
-            value: https://github.com/konflux-ci/build-definitions
+            value: https://github.com/yashvardhannanavati/build-definitions
           - name: revision
-            value: 5394c347b0f67c516bc7ebad3144cfe38ce6b0b4
+            value: c585316629b274aba726e0ebecaa8f11e77389b7
           - name: pathInRepo
             value: stepactions/fips-operator-check-step-action/0.1/fips-operator-check-step-action.yaml
         resolver: git
