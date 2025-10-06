@@ -274,10 +274,10 @@ spec:
     - name: fips-operator-check-step-action
       computeResources:
         limits:
-          memory: 12Gi
+          memory: 16Gi
         requests:
           cpu: "1"
-          memory: 12Gi
+          memory: 16Gi
       ref:
         params:
           - name: url
