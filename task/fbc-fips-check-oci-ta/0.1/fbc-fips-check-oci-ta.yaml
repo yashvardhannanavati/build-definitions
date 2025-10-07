@@ -285,7 +285,7 @@ spec:
           - name: url
             value: https://github.com/yashvardhannanavati/build-definitions
           - name: revision
-            value: c585316629b274aba726e0ebecaa8f11e77389b7
+            value: yashvardhannanavati-patch-1
           - name: pathInRepo
             value: stepactions/fips-operator-check-step-action/0.1/fips-operator-check-step-action.yaml
         resolver: git

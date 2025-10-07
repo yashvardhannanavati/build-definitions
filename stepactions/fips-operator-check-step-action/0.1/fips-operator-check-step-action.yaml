@@ -123,6 +123,8 @@ spec:
       # Convert image to OCI format since umoci can only handle the OCI format
       if ! retry skopeo copy --remove-signatures "docker://${sanitized_related_image}" "oci:///tekton/home/${component_label}-${version_label}-${release_label}:latest"; then
         echo -e "Error: Unable to scan image: Could not convert image ${related_image} to OCI format\n"
+        # Clean up any partial OCI image artifacts to prevent resource accumulation
+        rm -rf "/tekton/home/${component_label}-${version_label}-${release_label}:latest"
         error_counter=$((error_counter + 1))
         continue
       fi
@@ -132,6 +134,9 @@ spec:
           --image "/tekton/home/${component_label}-${version_label}-${release_label}:latest" \
           "/tekton/home/unpacked-${component_label}-${version_label}-${release_label}"; then
         echo -e "Error: Unable to scan image: Could not unpack OCI image ${related_image}\n"
+        # Clean up OCI image and any partial unpacked directory to prevent resource accumulation
+        rm -rf "/tekton/home/${component_label}-${version_label}-${release_label}:latest"
+        rm -rf "/tekton/home/unpacked-${component_label}-${version_label}-${release_label}"
         error_counter=$((error_counter + 1))
         continue
       fi
@@ -146,6 +151,9 @@ spec:
           --output-format=csv \
           --output-file="/tekton/home/report-${component_label}-${version_label}-${release_label}.csv"; then
         echo -e "check-payload scan failed for ${related_image}\n"
+        # Clean up OCI image and unpacked directory on scan failure to prevent resource accumulation
+        rm -rf "/tekton/home/${component_label}-${version_label}-${release_label}:latest"
+        rm -rf "/tekton/home/unpacked-${component_label}-${version_label}-${release_label}"
         failure_counter=$((failure_counter + 1))
         continue
       fi
@@ -154,9 +162,15 @@ spec:
         if grep -q -- "---- Successful run" "/tekton/home/report-${component_label}-${version_label}-${release_label}.csv"; then
           echo -e "check-payload scan was successful for ${related_image}\n"
           success_counter=$((success_counter + 1))
+          # Clean up OCI image and unpacked directory on successful run to save space
+          rm -rf "/tekton/home/${component_label}-${version_label}-${release_label}:latest"
+          rm -rf "/tekton/home/unpacked-${component_label}-${version_label}-${release_label}"
         elif grep -q -- "---- Successful run with warnings" "/tekton/home/report-${component_label}-${version_label}-${release_label}.csv"; then
           echo -e "check-payload scan was successful with warnings for ${related_image}\n"
           warnings_counter=$((warnings_counter + 1))
+          # Clean up OCI image and unpacked directory on successful run with warnings to save space
+          rm -rf "/tekton/home/${component_label}-${version_label}-${release_label}:latest"
+          rm -rf "/tekton/home/unpacked-${component_label}-${version_label}-${release_label}"
         fi
       fi
 
