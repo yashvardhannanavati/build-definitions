@@ -113,6 +113,12 @@ spec:
       # Sanitize the image reference to handle Docker references with both tag and digest
       sanitized_related_image=$(get_image_registry_repository_digest "${related_image}")
 
+      # Sanitize component_label to prevent directory path issues
+      # Replace problematic characters (/ \ : * ? " < > | and whitespace) with hyphens
+      sanitized_component_label=$(echo "${component_label}" | tr '/\\:*?"<>|[:space:]' '-')
+      echo "Sanitized component label for path usage: ${component_label} -> ${sanitized_component_label}"
+      component_label="${sanitized_component_label}"
+
       # If no digest is present, fallback to using tag-based sanitization
       if [[ "${sanitized_related_image}" != *"@"* ]]; then
         echo "No digest found in sanitized image, using tag-based sanitization"
