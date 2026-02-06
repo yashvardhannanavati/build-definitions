@@ -158,7 +158,7 @@ spec:
       ref:
         params:
           - name: url
-            value: https://github.com/konflux-ci/build-definitions
+            value: https://github.com/yashvardhannanavati/build-definitions
           - name: revision
             value: yashvardhannanavati-patch-1
           - name: pathInRepo
